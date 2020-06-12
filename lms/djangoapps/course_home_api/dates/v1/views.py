@@ -59,12 +59,12 @@ class DatesTabView(RetrieveAPIView):
     serializer_class = DatesTabSerializer
 
     def get(self, request, *args, **kwargs):
-        #NOTE: @dlichen this is the backend for the MFE 
+        #NOTE: @dlichen this is the backend for the MFE
         course_key_string = kwargs.get('course_key_string')
         course_key = CourseKey.from_string(course_key_string)
 
-        if not course_home_mfe_dates_tab_is_active(course_key):
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        # if not course_home_mfe_dates_tab_is_active(course_key):
+        #     return Response(status=status.HTTP_404_NOT_FOUND)
 
         # Enable NR tracing for this view based on course
         monitoring_utils.set_custom_metric('course_id', course_key_string)

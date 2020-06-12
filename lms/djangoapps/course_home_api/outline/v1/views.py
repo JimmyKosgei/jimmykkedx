@@ -11,6 +11,9 @@ from edx_django_utils import monitoring as monitoring_utils
 from opaque_keys.edx.keys import CourseKey
 
 from lms.djangoapps.course_home_api.outline.v1.serializers import OutlineTabSerializer
+from lms.djangoapps.courseware.courses import get_course_date_blocks, get_course_with_access
+from lms.djangoapps.courseware.date_summary import TodaysDate
+from lms.djangoapps.courseware.context_processor import user_timezone_locale_prefs
 from openedx.features.course_experience.course_tools import CourseToolsPluginManager
 
 
@@ -52,9 +55,23 @@ class OutlineTabView(RetrieveAPIView):
 
         course_key = CourseKey.from_string(course_key_string)
         course_tools = CourseToolsPluginManager.get_enabled_course_tools(request, course_key)
+        #TODO @dli-chen: add date blocks, TODO: check this method
 
+        course = get_course_with_access(request.user, 'load', course_key, check_if_enrolled=False)
+        #may have to change num_assignments to be more ? currently None
+        blocks = get_course_date_blocks(course, request.user, request, num_assignments=1, include_past_dates=False)
+
+        # User locale settings
+        user_timezone_locale = user_timezone_locale_prefs(request)
+        user_timezone = user_timezone_locale['user_timezone']
+        # try printing it out and see what's happening?- it's None
+        print(user_timezone)
         data = {
             'course_tools': course_tools,
+            #is this just removing whatever is today's date?
+            'course_date_blocks': [block for block in blocks if not isinstance(block, TodaysDate)],
+            'user_timezone': user_timezone,
+            #TODO: @dlichen date blocks
         }
         context = self.get_serializer_context()
         context['course_key'] = course_key
