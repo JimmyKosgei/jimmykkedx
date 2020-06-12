@@ -14,6 +14,7 @@ from functools import reduce
 from pkg_resources import resource_string
 
 import six
+from django.contrib.auth.models import User
 from lxml import etree
 from opaque_keys.edx.keys import UsageKey
 from pytz import UTC
@@ -290,6 +291,26 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
                 banner_text, special_html = special_html_view
                 if special_html and not masquerading_as_specific_student:
                     return Fragment(special_html)
+
+        # Content type gating for FBE previously only gated individual blocks
+        # This was an issue because audit learners could start a timed exam and then be unable to complete the exam
+        # even if they later upgrade because the timer would have expired.
+        # For this reason we check if content type gating is enabled for the user and gate the entire sequence in that event
+        if self.is_time_limited and self.location.block_type == 'sequential':
+            try:
+                user = User.objects.get(id=self.runtime.user_id)
+                # importing here to avoid a circular import
+                from openedx.features.content_type_gating.models import ContentTypeGatingConfig
+                from openedx.features.content_type_gating.helpers import CONTENT_GATING_PARTITION_ID
+                self.content_type_gating_enabled = ContentTypeGatingConfig.enabled_for_enrollment(user=user, course_key=self.runtime.course_id)
+                if self.content_type_gating_enabled:
+                    # Get the content type gating locked content fragment to render for this sequence
+                    partition = self.descriptor._get_user_partition(CONTENT_GATING_PARTITION_ID)
+                    user_group = partition.scheme.get_group_for_user(self.runtime.course_id, user, partition)
+                    self.gated_sequence_fragment = partition.access_denied_fragment(self.descriptor, user, user_group, [])
+            except User.DoesNotExist:
+                pass
+
         return self._student_or_public_view(context, prereq_met, prereq_meta_info, banner_text)
 
     def public_view(self, context):
@@ -369,6 +390,7 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             )
 
         items = self._render_student_view_for_items(context, display_items, fragment, view) if prereq_met else []
+
         params = {
             'items': items,
             'element_id': self.location.html_id(),
@@ -383,8 +405,12 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             'save_position': view != PUBLIC_VIEW,
             'show_completion': view != PUBLIC_VIEW,
             'gated_content': self._get_gated_content_info(prereq_met, prereq_meta_info),
+            'sequence_name': self.display_name,
             'exclude_units': context.get('exclude_units', False)
         }
+        if getattr(self, 'gated_sequence_fragment', None):
+            params['gated_sequence_fragment'] = self.gated_sequence_fragment.content
+
         return params
 
     def _student_or_public_view(self, context, prereq_met, prereq_meta_info, banner_text=None, view=STUDENT_VIEW):
