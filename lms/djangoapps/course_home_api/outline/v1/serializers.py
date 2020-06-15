@@ -4,7 +4,7 @@ Outline Tab Serializers.
 
 
 from rest_framework import serializers
-from lms.djangoapps.courseware.date_summary import VerificationDeadlineDate
+from lms.djangoapps.course_home_api.dates.v1.serializers import DateSummarySerializer
 
 class CourseToolSerializer(serializers.Serializer):
     """
@@ -19,33 +19,6 @@ class CourseToolSerializer(serializers.Serializer):
         url = tool.url(course_key)
         request = self.context.get('request')
         return request.build_absolute_uri(url)
-
-
-class DateSummarySerializer(serializers.Serializer):
-    """
-    Serializer for Date Summary Objects.
-    """
-    date = serializers.DateTimeField()
-    date_type = serializers.CharField()
-    description = serializers.CharField()
-    learner_has_access = serializers.SerializerMethodField()
-    link = serializers.SerializerMethodField()
-    title = serializers.CharField()
-    link_text = serializers.CharField()
-    title_html = serializers.CharField()
-
-    def get_learner_has_access(self, block):
-        learner_is_full_access = self.context.get('learner_is_full_access', False)
-        block_is_verified = (getattr(block, 'contains_gated_content', False) or
-                             isinstance(block, VerificationDeadlineDate))
-        return (not block_is_verified) or learner_is_full_access
-
-    def get_link(self, block):
-        if block.link:
-            request = self.context.get('request')
-            return request.build_absolute_uri(block.link)
-        return ''
-
 
 class OutlineTabSerializer(serializers.Serializer):
     """

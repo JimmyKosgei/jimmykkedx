@@ -12,9 +12,12 @@ from opaque_keys.edx.keys import CourseKey
 from django.urls import reverse
 
 from lms.djangoapps.course_home_api.outline.v1.serializers import OutlineTabSerializer
+
+from lms.djangoapps.course_home_api.toggles import course_home_mfe_dates_tab_is_active
 from lms.djangoapps.courseware.courses import get_course_date_blocks, get_course_with_access
 from lms.djangoapps.courseware.date_summary import TodaysDate
 from lms.djangoapps.courseware.context_processor import user_timezone_locale_prefs
+from lms.djangoapps.course_home_api.utils import get_microfrontend_url
 from openedx.features.course_experience.course_tools import CourseToolsPluginManager
 
 
@@ -58,19 +61,23 @@ class OutlineTabView(RetrieveAPIView):
         course_tools = CourseToolsPluginManager.get_enabled_course_tools(request, course_key)
 
         course = get_course_with_access(request.user, 'load', course_key, check_if_enrolled=False)
-        blocks = get_course_date_blocks(course, request.user, request, num_assignments=1, include_past_dates=False)
+        blocks = get_course_date_blocks(course, request.user, request, num_assignments=1)
 
         # User locale settings
         user_timezone_locale = user_timezone_locale_prefs(request)
         user_timezone = user_timezone_locale['user_timezone']
 
+        dates_tab_link = reverse('dates', args=[course.id])
+        if course_home_mfe_dates_tab_is_active(course.id):
+            return get_microfrontend_url(course_key=course.id, view_name='dates')
+
+
         data = {
             'course_tools': course_tools,
             'course_date_blocks': [block for block in blocks if not isinstance(block, TodaysDate)],
-            'dates_tab_link': reverse('dates', args=[course.id]),
+            'dates_tab_link': dates_tab_link,
             'user_timezone': user_timezone,
         }
-        print(data)
         context = self.get_serializer_context()
         context['course_key'] = course_key
         serializer = self.get_serializer_class()(data, context=context)
