@@ -162,7 +162,7 @@ itypes==1.2.0             # via -r requirements/edx/base.txt, coreapi
 jinja2-pluralize==0.3.0   # via -r requirements/edx/coverage.txt, diff-cover
 jinja2==2.11.2            # via -r requirements/edx/base.txt, -r requirements/edx/coverage.txt, code-annotations, coreschema, diff-cover, jinja2-pluralize
 jmespath==0.10.0          # via -r requirements/edx/base.txt, boto3, botocore
-joblib==0.14.1            # via -c requirements/edx/../constraints.txt, -r requirements/edx/base.txt, nltk
+joblib==1.2.0            # via -c requirements/edx/../constraints.txt, -r requirements/edx/base.txt, nltk
 jsondiff==1.2.0           # via -r requirements/edx/base.txt, edx-enterprise
 jsonfield2==3.0.3         # via -c requirements/edx/../constraints.txt, -r requirements/edx/base.txt, edx-celeryutils, edx-enterprise, edx-proctoring, edx-submissions, ora2
 kombu==3.0.37             # via -r requirements/edx/base.txt, celery
